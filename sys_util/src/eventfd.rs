@@ -5,10 +5,11 @@
 use std::fs::File;
 use std::mem;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::result;
 
-use libc::{c_void, dup, eventfd, read, write};
+use libc::{c_int, c_void, dup, eventfd, poll, pollfd, read, write, POLLIN};
 
-use {errno_result, Result};
+use {errno_result, Error as ErrNoErr, Result};
 
 /// A safe wrapper around a Linux eventfd (man 2 eventfd).
 ///
@@ -69,6 +70,23 @@ impl EventFd {
         Ok(buf)
     }
 
+    pub fn try_read(&self) -> result::Result<u64, Error> {
+        let mut pd: pollfd;
+        let poll_status = unsafe {
+            pd = std::mem::uninitialized();
+            pd.fd = self.as_raw_fd() as c_int;
+            pd.events = POLLIN;
+            poll(&mut pd, 1, 0)
+        };
+        if poll_status == 0 {
+            Err(Error::NotReady)
+        } else if poll_status > 0 {
+            self.read().map_err(|e| Error::ReadFailed(e))
+        } else {
+            errno_result().map_err(|e| Error::ReadFailed(e))
+        }
+    }
+
     /// Clones this EventFd, internally creating a new file descriptor. The new EventFd will share
     /// the same underlying count within the kernel.
     pub fn try_clone(&self) -> Result<EventFd> {
@@ -91,6 +109,12 @@ impl AsRawFd for EventFd {
     }
 }
 
+#[derive(Debug)]
+pub enum Error {
+    NotReady,
+    ReadFailed(ErrNoErr),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +129,24 @@ mod tests {
         let evt = EventFd::new().unwrap();
         evt.write(55).unwrap();
         assert_eq!(evt.read(), Ok(55));
+    }
+
+    #[test]
+    fn try_read_nothing() {
+        let evt = EventFd::new().unwrap();
+        let r = evt.try_read();
+        match r {
+            Err(Error::NotReady) => (),
+            _ => panic!("invalid state"),
+        }
+    }
+
+    #[test]
+    fn try_read_something() {
+        let evt = EventFd::new().unwrap();
+        evt.write(1189998819999197253).unwrap();
+        let r = evt.try_read().unwrap();
+        assert_eq!(r, 1189998819999197253);
     }
 
     #[test]
