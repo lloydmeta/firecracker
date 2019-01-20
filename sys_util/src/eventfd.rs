@@ -70,6 +70,8 @@ impl EventFd {
         Ok(buf)
     }
 
+    /// Tries to read the EventFd's count (but does not block if it is zero), then resets the count
+    /// to zero.
     pub fn try_read(&self) -> result::Result<u64, Error> {
         let mut pd: pollfd;
         let poll_status = unsafe {
@@ -110,8 +112,11 @@ impl AsRawFd for EventFd {
 }
 
 #[derive(Debug)]
+/// Describes the errors that may occur while trying to work with EventFds
 pub enum Error {
+    /// The EventFd was not yet ready for the attempted operation
     NotReady,
+    /// The read attempt on EventFd failed; the underlying IO error is contained within.
     ReadFailed(ErrNoErr),
 }
 
