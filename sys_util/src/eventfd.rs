@@ -10,8 +10,6 @@ use std::result;
 
 use libc::{c_int, c_void, dup, eventfd, poll, pollfd, read, write, POLLIN};
 
-use {errno_result, Result};
-
 /// A safe wrapper around a Linux eventfd (man 2 eventfd).
 ///
 /// An eventfd is useful because it is sendable across processes and can be used for signaling in
@@ -22,22 +20,23 @@ pub struct EventFd {
 
 impl EventFd {
     /// Creates a new blocking EventFd with an initial value of 0.
-    pub fn new() -> Result<EventFd> {
+    pub fn new() -> result::Result<EventFd, io::Error> {
         // This is safe because eventfd merely allocated an eventfd for our process and we handle
         // the error case.
         let ret = unsafe { eventfd(0, 0) };
         if ret < 0 {
-            return errno_result();
+            Err(io::Error::last_os_error())
+        } else {
+            // This is safe because we checked ret for success and know the kernel gave us an fd that we
+            // own.
+            Ok(EventFd {
+                eventfd: unsafe { File::from_raw_fd(ret) },
+            })
         }
-        // This is safe because we checked ret for success and know the kernel gave us an fd that we
-        // own.
-        Ok(EventFd {
-            eventfd: unsafe { File::from_raw_fd(ret) },
-        })
     }
 
     /// Adds `v` to the eventfd's count, blocking until this won't overflow the count.
-    pub fn write(&self, v: u64) -> Result<()> {
+    pub fn write(&self, v: u64) -> result::Result<(), io::Error> {
         // This is safe because we made this fd and the pointer we pass can not overflow because we
         // give the syscall's size parameter properly.
         let ret = unsafe {
@@ -48,13 +47,14 @@ impl EventFd {
             )
         };
         if ret <= 0 {
-            return errno_result();
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     /// Blocks until the the eventfd's count is non-zero, then resets the count to zero.
-    pub fn read(&self) -> Result<u64> {
+    pub fn read(&self) -> result::Result<u64, io::Error> {
         let mut buf: u64 = 0;
         let ret = unsafe {
             // This is safe because we made this fd and the pointer we pass can not overflow because
@@ -66,9 +66,10 @@ impl EventFd {
             )
         };
         if ret <= 0 {
-            return errno_result();
+            Err(io::Error::last_os_error())
+        } else {
+            Ok(buf)
         }
-        Ok(buf)
     }
 
     /// Tries to read the EventFd's count (but does not block if it is zero), then resets the count
@@ -84,8 +85,7 @@ impl EventFd {
         if poll_status == 0 {
             Err(Error::NotReady)
         } else if poll_status > 0 {
-            self.read()
-                .map_err(|e| Error::ReadFailed(io::Error::from_raw_os_error(e.errno())))
+            self.read().map_err(Error::ReadFailed)
         } else {
             Err(Error::ReadFailed(io::Error::last_os_error()))
         }
@@ -93,17 +93,18 @@ impl EventFd {
 
     /// Clones this EventFd, internally creating a new file descriptor. The new EventFd will share
     /// the same underlying count within the kernel.
-    pub fn try_clone(&self) -> Result<EventFd> {
+    pub fn try_clone(&self) -> result::Result<EventFd, io::Error> {
         // This is safe because we made this fd and properly check that it returns without error.
         let ret = unsafe { dup(self.as_raw_fd()) };
         if ret < 0 {
-            return errno_result();
+            Err(io::Error::last_os_error())
+        } else {
+            // This is safe because we checked ret for success and know the kernel gave us an fd that we
+            // own.
+            Ok(EventFd {
+                eventfd: unsafe { File::from_raw_fd(ret) },
+            })
         }
-        // This is safe because we checked ret for success and know the kernel gave us an fd that we
-        // own.
-        Ok(EventFd {
-            eventfd: unsafe { File::from_raw_fd(ret) },
-        })
     }
 }
 
@@ -135,7 +136,7 @@ mod tests {
     fn read_write() {
         let evt = EventFd::new().unwrap();
         evt.write(55).unwrap();
-        assert_eq!(evt.read(), Ok(55));
+        assert_eq!(evt.read().unwrap(), 55);
     }
 
     #[test]
@@ -161,6 +162,6 @@ mod tests {
         let evt = EventFd::new().unwrap();
         let evt_clone = evt.try_clone().unwrap();
         evt.write(923).unwrap();
-        assert_eq!(evt_clone.read(), Ok(923));
+        assert_eq!(evt_clone.read().unwrap(), 923);
     }
 }

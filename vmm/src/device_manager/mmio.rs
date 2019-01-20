@@ -7,6 +7,7 @@
 
 use std::collections::HashMap;
 use std::fmt;
+use std::io;
 use std::sync::{Arc, Mutex};
 
 use devices;
@@ -24,9 +25,9 @@ pub enum Error {
     /// Could not create the mmio device to wrap a VirtioDevice.
     CreateMmioDevice(sys_util::Error),
     /// Failed to clone a queue's ioeventfd.
-    CloneIoeventFd(sys_util::Error),
+    CloneIoeventFd(io::Error),
     /// Failed to clone the mmio irqfd.
-    CloneIrqFd(sys_util::Error),
+    CloneIrqFd(io::Error),
     /// Appending to kernel command line failed.
     Cmdline(kernel_cmdline::Error),
     /// No more IRQs are available.
@@ -312,10 +313,22 @@ mod tests {
             format!("{}", e),
             "unable to add device to kernel command line: string contains an equals sign"
         );
-        let e = Error::CloneIoeventFd(sys_util::Error::new(0));
-        assert_eq!(format!("{}", e), "failed to clone ioeventfd: Error(0)");
-        let e = Error::CloneIrqFd(sys_util::Error::new(0));
-        assert_eq!(format!("{}", e), "failed to clone irqfd: Error(0)");
+        let e = Error::CloneIoeventFd(io::Error::from_raw_os_error(0));
+        assert_eq!(
+            format!("{}", e),
+            format!(
+                "failed to clone ioeventfd: {:?}",
+                io::Error::from_raw_os_error(0)
+            )
+        );
+        let e = Error::CloneIrqFd(io::Error::from_raw_os_error(0));
+        assert_eq!(
+            format!("{}", e),
+            format!(
+                "failed to clone irqfd: {:?}",
+                io::Error::from_raw_os_error(0)
+            )
+        );
         let e = Error::UpdateFailed;
         assert_eq!(format!("{}", e), "failed to update the mmio device");
     }

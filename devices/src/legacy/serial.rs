@@ -7,6 +7,7 @@
 
 use std::collections::VecDeque;
 use std::io;
+use std::result;
 
 use logger::{Metric, METRICS};
 use sys_util::{EventFd, Result};
@@ -151,7 +152,7 @@ impl Serial {
         Ok(())
     }
 
-    fn trigger_interrupt(&mut self) -> Result<()> {
+    fn trigger_interrupt(&mut self) -> result::Result<(), io::Error> {
         self.interrupt_evt.write(1)
     }
 
@@ -300,7 +301,7 @@ mod tests {
             .queue_input_bytes(&['a' as u8, 'b' as u8, 'c' as u8])
             .unwrap();
 
-        assert_eq!(intr_evt.read(), Ok(2));
+        assert_eq!(intr_evt.read().unwrap(), 2);
 
         // check if reading in a 2-length array doesn't have side effects
         let mut data = [0u8, 0u8];
@@ -333,7 +334,7 @@ mod tests {
         serial.write(IER as u64, &[IER_THR_BIT]);
         serial.write(DATA as u64, &['a' as u8]);
 
-        assert_eq!(intr_evt.read(), Ok(2));
+        assert_eq!(intr_evt.read().unwrap(), 2);
         let mut data = [0u8];
         serial.read(IER as u64, &mut data[..]);
         assert_eq!(data[0] & IER_FIFO_BITS, IER_THR_BIT);

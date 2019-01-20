@@ -8,6 +8,7 @@
 //! Implements vhost-based virtio devices.
 
 use std;
+use std::io;
 use sys_util::Error as SysError;
 
 pub mod handle;
@@ -48,9 +49,9 @@ pub enum Error {
     /// Failed to start vhost-vsock driver.
     VhostVsockStart(vhost_backend::Error),
     /// Failed to create vhost eventfd.
-    VhostIrqCreate(SysError),
+    VhostIrqCreate(io::Error),
     /// Failed to read vhost eventfd.
-    VhostIrqRead(SysError),
+    VhostIrqRead(io::Error),
 }
 type Result<T> = std::result::Result<T, Error>;
 const INTERRUPT_STATUS_USED_RING: u32 = 0x1;

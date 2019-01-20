@@ -44,7 +44,7 @@ use vmm::VmmAction;
 #[derive(Debug)]
 pub enum Error {
     Io(io::Error),
-    Eventfd(sys_util::Error),
+    Eventfd(io::Error),
 }
 
 pub enum UnixDomainSocket<P> {
