@@ -3,13 +3,14 @@
 // found in the THIRD-PARTY file.
 
 use std::fs::File;
+use std::io;
 use std::mem;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
 use std::result;
 
 use libc::{c_int, c_void, dup, eventfd, poll, pollfd, read, write, POLLIN};
 
-use {errno_result, Error as ErrNoErr, Result};
+use {errno_result, Result};
 
 /// A safe wrapper around a Linux eventfd (man 2 eventfd).
 ///
@@ -83,9 +84,10 @@ impl EventFd {
         if poll_status == 0 {
             Err(Error::NotReady)
         } else if poll_status > 0 {
-            self.read().map_err(|e| Error::ReadFailed(e))
+            self.read()
+                .map_err(|e| Error::ReadFailed(io::Error::from_raw_os_error(e.errno())))
         } else {
-            errno_result().map_err(|e| Error::ReadFailed(e))
+            Err(Error::ReadFailed(io::Error::last_os_error()))
         }
     }
 
@@ -117,7 +119,7 @@ pub enum Error {
     /// The EventFd was not yet ready for the attempted operation
     NotReady,
     /// The read attempt on EventFd failed; the underlying IO error is contained within.
-    ReadFailed(ErrNoErr),
+    ReadFailed(io::Error),
 }
 
 #[cfg(test)]
