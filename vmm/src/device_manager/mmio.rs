@@ -41,8 +41,8 @@ impl fmt::Display for Error {
         match self {
             &Error::BusError(ref e) => write!(f, "failed to perform bus operation: {:?}", e),
             &Error::CreateMmioDevice(ref e) => write!(f, "failed to create mmio device: {:?}", e),
-            &Error::CloneIoeventFd(ref e) => write!(f, "failed to clone ioeventfd: {:?}", e),
-            &Error::CloneIrqFd(ref e) => write!(f, "failed to clone irqfd: {:?}", e),
+            &Error::CloneIoeventFd(ref e) => write!(f, "failed to clone ioeventfd: {}", e),
+            &Error::CloneIrqFd(ref e) => write!(f, "failed to clone irqfd: {}", e),
             &Error::Cmdline(ref e) => {
                 write!(f, "unable to add device to kernel command line: {}", e)
             }
@@ -316,18 +316,12 @@ mod tests {
         let e = Error::CloneIoeventFd(io::Error::from_raw_os_error(0));
         assert_eq!(
             format!("{}", e),
-            format!(
-                "failed to clone ioeventfd: {:?}",
-                io::Error::from_raw_os_error(0)
-            )
+            "failed to clone ioeventfd: No error information (os error 0)"
         );
         let e = Error::CloneIrqFd(io::Error::from_raw_os_error(0));
         assert_eq!(
             format!("{}", e),
-            format!(
-                "failed to clone irqfd: {:?}",
-                io::Error::from_raw_os_error(0)
-            )
+            "failed to clone irqfd: No error information (os error 0)"
         );
         let e = Error::UpdateFailed;
         assert_eq!(format!("{}", e), "failed to update the mmio device");

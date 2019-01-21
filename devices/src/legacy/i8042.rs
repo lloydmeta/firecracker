@@ -6,8 +6,7 @@
 // found in the THIRD-PARTY file.
 
 use logger::{Metric, METRICS};
-use std::io;
-use std::result;
+use std::{io, result};
 use sys_util::EventFd;
 
 use BusDevice;
