@@ -85,7 +85,7 @@ where
     ) -> std::result::Result<(), DeviceError> {
         match device_event {
             VHOST_IRQ_AVAILABLE => {
-                if let Err(e) = self.queue_evt.read() {
+                if let Err(e) = self.queue_evt.try_read() {
                     error!("failed reading queue EventFd: {:?}", e);
                     Err(DeviceError::FailedReadingQueue {
                         event_type: "EventFd",

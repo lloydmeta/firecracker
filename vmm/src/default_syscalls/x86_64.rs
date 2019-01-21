@@ -25,6 +25,7 @@ pub const ALLOWED_SYSCALLS: &[i64] = &[
     libc::SYS_munmap,
     libc::SYS_open,
     libc::SYS_pipe,
+    libc::SYS_poll,
     libc::SYS_read,
     libc::SYS_readv,
     libc::SYS_rt_sigreturn,
@@ -501,6 +502,10 @@ pub fn default_context() -> Result<SeccompFilterContext, Error> {
             ),
             (
                 libc::SYS_pipe,
+                (0, vec![SeccompRule::new(vec![], SeccompAction::Allow)]),
+            ),
+            (
+                libc::SYS_poll,
                 (0, vec![SeccompRule::new(vec![], SeccompAction::Allow)]),
             ),
             (

@@ -353,7 +353,7 @@ impl EpollHandler for BlockEpollHandler {
         match device_event {
             QUEUE_AVAIL_EVENT => {
                 METRICS.block.queue_event_count.inc();
-                if let Err(e) = self.queue_evt.read() {
+                if let Err(e) = self.queue_evt.try_read() {
                     error!("Failed to get queue event: {:?}", e);
                     METRICS.block.event_fails.inc();
                     Err(DeviceError::FailedReadingQueue {

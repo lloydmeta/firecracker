@@ -109,7 +109,7 @@ enum Error {
     /// An operation on the epoll instance failed due to resource exhaustion or bad configuration.
     EpollFd(std::io::Error),
     /// Cannot read from an Event file descriptor.
-    EventFd(std::io::Error),
+    EventFd(sys_util::eventfd::Error),
     /// Describes a logical problem.
     GeneralFailure, // TODO: there are some cases in which this error should be replaced.
     /// Cannot open /dev/kvm. Either the host does not have KVM or Firecracker does not have
@@ -626,6 +626,13 @@ impl Vmm {
                         Err(devices::Error::PayloadExpected) => {
                             panic!("Received update disk image event with empty payload.")
                         }
+                        Err(devices::Error::FailedReadingQueue {
+                            event_type,
+                            underlying,
+                        }) => panic!(
+                            "Failed to read from queue: {:?} {:?}",
+                            event_type, underlying
+                        ),
                         Err(devices::Error::UnknownEvent { device, event }) => {
                             panic!("Unknown event: {:?} {:?}", device, event)
                         }
@@ -1290,7 +1297,7 @@ impl Vmm {
                         EpollDispatch::Exit => {
                             match self.exit_evt {
                                 Some(ref ev) => {
-                                    ev.fd.read().map_err(Error::EventFd)?;
+                                    ev.fd.try_read().map_err(Error::EventFd)?;
                                 }
                                 None => warn!("leftover exit-evt in epollcontext!"),
                             }
@@ -1334,6 +1341,13 @@ impl Vmm {
                                         Err(devices::Error::PayloadExpected) => panic!(
                                             "Received update disk image event with empty payload."
                                         ),
+                                        Err(devices::Error::FailedReadingQueue {
+                                            event_type,
+                                            underlying,
+                                        }) => panic!(
+                                            "Failed to read from queue: {:?} {:?}",
+                                            event_type, underlying
+                                        ),
                                         Err(devices::Error::UnknownEvent { device, event }) => {
                                             panic!("Unknown event: {:?} {:?}", device, event)
                                         }
@@ -1346,7 +1360,7 @@ impl Vmm {
                             }
                         }
                         EpollDispatch::VmmActionRequest => {
-                            self.api_event.fd.read().map_err(Error::EventFd)?;
+                            self.api_event.fd.try_read().map_err(Error::EventFd)?;
                             self.run_vmm_action().unwrap_or_else(|_| {
                                 warn!("got spurious notification from api thread");
                                 ()

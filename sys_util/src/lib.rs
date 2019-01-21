@@ -13,7 +13,7 @@ extern crate libc;
 pub mod ioctl;
 
 mod errno;
-mod eventfd;
+pub mod eventfd;
 mod signal;
 mod struct_util;
 mod terminal;

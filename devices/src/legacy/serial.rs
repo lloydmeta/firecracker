@@ -6,8 +6,7 @@
 // found in the THIRD-PARTY file.
 
 use std::collections::VecDeque;
-use std::io;
-use std::result;
+use std::{io, result};
 
 use logger::{Metric, METRICS};
 use sys_util::{EventFd, Result};

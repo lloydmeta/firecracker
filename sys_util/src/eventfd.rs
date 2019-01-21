@@ -3,10 +3,8 @@
 // found in the THIRD-PARTY file.
 
 use std::fs::File;
-use std::io;
-use std::mem;
 use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
-use std::result;
+use std::{io, mem, result};
 
 use libc::{c_int, c_void, dup, eventfd, poll, pollfd, read, write, POLLIN};
 

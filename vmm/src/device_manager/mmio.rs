@@ -6,9 +6,8 @@
 // found in the THIRD-PARTY file.
 
 use std::collections::HashMap;
-use std::fmt;
-use std::io;
 use std::sync::{Arc, Mutex};
+use std::{fmt, io};
 
 use devices;
 use kernel_cmdline;
@@ -316,12 +315,15 @@ mod tests {
         let e = Error::CloneIoeventFd(io::Error::from_raw_os_error(0));
         assert_eq!(
             format!("{}", e),
-            "failed to clone ioeventfd: No error information (os error 0)"
+            format!(
+                "failed to clone ioeventfd: {}",
+                io::Error::from_raw_os_error(0)
+            )
         );
         let e = Error::CloneIrqFd(io::Error::from_raw_os_error(0));
         assert_eq!(
             format!("{}", e),
-            "failed to clone irqfd: No error information (os error 0)"
+            format!("failed to clone irqfd: {}", io::Error::from_raw_os_error(0))
         );
         let e = Error::UpdateFailed;
         assert_eq!(format!("{}", e), "failed to update the mmio device");

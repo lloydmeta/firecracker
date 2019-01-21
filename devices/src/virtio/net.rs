@@ -508,7 +508,7 @@ impl EpollHandler for NetEpollHandler {
         match device_event {
             RX_QUEUE_EVENT => {
                 METRICS.net.rx_queue_event_count.inc();
-                if let Err(e) = self.rx.queue_evt.read() {
+                if let Err(e) = self.rx.queue_evt.try_read() {
                     error!("Failed to get rx queue event: {:?}", e);
                     METRICS.net.event_fails.inc();
                     Err(DeviceError::FailedReadingQueue {
@@ -552,7 +552,7 @@ impl EpollHandler for NetEpollHandler {
             }
             TX_QUEUE_EVENT => {
                 METRICS.net.tx_queue_event_count.inc();
-                if let Err(e) = self.tx.queue_evt.read() {
+                if let Err(e) = self.tx.queue_evt.try_read() {
                     error!("Failed to get tx queue event: {:?}", e);
                     METRICS.net.event_fails.inc();
                     Err(DeviceError::FailedReadingQueue {
